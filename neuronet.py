@@ -22,11 +22,11 @@ def neuro_connection_uniform():
 
 """ neuron network connections with exponential distribution """
 def neuro_connection():
-    gv.adj_mat = np.zeros((Mneuro*Nneuro, Mneuro*Nneuro))
+    #gv.adj_mat = np.zeros((Mneuro*Nneuro, Mneuro*Nneuro), 'int8')
     ties_stock = 10*N_out
     for i in range(Mneuro):
         for j in range(Nneuro):
-            XY = np.zeros((2, ties_stock), 'int64')
+            XY = np.zeros((2, ties_stock), 'int8')
             R = np.random.exponential(lambda_exp, size = ties_stock)
             fi = 2 * np.pi * np.random.rand(ties_stock, )
             pos = R * np.cos(fi)
@@ -68,18 +68,73 @@ def make_Poisson_noise():
     amplitude = np.random.uniform(-A_stim, A_stim, (Mneuro, Nneuro))
     return I_noise * amplitude
 
-""" calculate g_syn determined by calcium level"""
+""" calculate g_syn determined by calcium level, return value must be a vector"""
+"""
 def calcul_g_syn(astro_Ca):
-    neuro_Ca = calcul_neuro_Ca(astro_Ca)
-    return np.where(neuro_Ca > Ca_thr, eta+v_Ca_star, eta)
+    neuro_Ca = calcul_neuro_Ca(astro_Ca, gv.adj_ts_an)
+    return np.where(neuro_Ca > Ca_thr, eta+v_Ca_star, eta).reshape((Mneuro*Nneuro))
+"""
+"""
+def calcul_g_syn(astro_Ca):
+    g_syn_mat = np.zeros((Mneuro*Nneuro, Mneuro*Nneuro))
+    for j in range(Mneuro*Nneuro):
+        for k in range(Mneuro*Nneuro):
+            if gv.adj_mat[j, k] == 1:
+                xj = j//Mneuro
+                yj = j%Mneuro
+                xk = k//Nneuro
+                yk = k%Nneuro
+                astro_j = gv.adj_ts_an[xj, yj]
+                astro_k = gv.adj_ts_an[xk, yk]
+                astro_sum = astro_j + astro_k
+                astro_sum = np.where(astro_sum>1, 1, 0)
+                syn_Ca = (astro_Ca * astro_sum).sum() 
+                if syn_Ca > Ca_thr:
+                    g_syn_mat[j, k] = eta+v_Ca_star
+                else:
+                    g_syn_mat[j, k] = eta
+    return g_syn_mat      
+"""
+
+@numba.jit(nopython=True)
+def calcul_g_syn(astro_Ca, adj1, adj2):
+    g_syn_mat = np.zeros((Mneuro*Nneuro, Mneuro*Nneuro))
+    for j in range(Mneuro*Nneuro):
+        for k in range(Mneuro*Nneuro):
+            if adj1[j, k] == 1:
+                xj = j//Mneuro
+                yj = j%Mneuro
+                xk = k//Nneuro
+                yk = k%Nneuro
+                astro_j = adj2[xj, yj]
+                astro_k = adj2[xk, yk]
+                astro_sum = astro_j + astro_k
+                astro_sum = np.where(astro_sum>1, 1, 0)
+                syn_Ca = (astro_Ca * astro_sum).sum() 
+                if syn_Ca > Ca_thr:
+                    g_syn_mat[j, k] = eta+v_Ca_star
+                else:
+                    g_syn_mat[j, k] = eta
+    return g_syn_mat      
+           
     
 """ calculate I_syn"""
+"""
 def calcul_I_syn(g_syn, v):
     v_vec = v.reshape((Mneuro*Nneuro))
     denom = 1 + np.exp(-v_vec/k_syn)  
     prod = np.dot(gv.adj_mat, 1/denom)
     v_mat = np.multiply(g_syn*(E_syn - v_vec), prod) 
     return v_mat.reshape((Mneuro, Nneuro))
+"""
+def calcul_I_syn(g_syn, v):
+    v_vec = v.reshape((Mneuro*Nneuro))
+    denom = 1 + np.exp(-v_vec/k_syn)
+    sum_mat = np.dot(g_syn, 1/denom)
+    v_mat = np.multiply(E_syn - v_vec, sum_mat)
+    return v_mat.reshape((Mneuro, Nneuro))
+
+
 
 """ update V and U in each step"""
 def step_V_U(step, I_app):
@@ -88,8 +143,10 @@ def step_V_U(step, I_app):
     temp_v = np.where(old_v >= spiking_thres, c, old_v)
     temp_u = np.where(old_v >= spiking_thres, old_u + d, old_u)
     du = a * (b* temp_v - temp_u)
+    g_syn_t = calcul_g_syn(gv.Ca_all[step-1], gv.adj_mat, gv.adj_ts_an)
+    #g_syn_t = 0.025
     dv = (0.04*temp_v*temp_v + 5*temp_v - temp_u + 140 
-               + calcul_I_syn(0.025, temp_v) + I_app)
+               + calcul_I_syn(g_syn_t, temp_v) + I_app)
     new_v = temp_v + dv * dtn
     new_u = temp_u + du * dtn
     new_v = np.where(new_v > spiking_thres, spiking_thres, new_v)

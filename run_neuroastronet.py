@@ -37,8 +37,6 @@ neuro_connection()  # set up neuronal connections
 neuroastro_connection()  
 astroneuro_connection()
 
-#a0=calcul_astro_G(np.eye(Mneuro))
-#b0=calcul_neuro_Ca(np.eye(Mastro))
 
 """
 fig = plt.figure()
@@ -56,11 +54,11 @@ animation.save('./anim.gif', writer='PillowWriter')
 t2 = time.time()
 print(t2 - t1)
 """
+
+
+
 for step in range(1, num_steps):
-    if step*dt <0.2:
-        step_V_U(step, gv.images[0].T)
-    else:
-        step_V_U(step, np.zeros((79,79)))
+    step_V_U(step, gv.images[0].T)
     step_neuro_G(step)
     step_Ca(step)
     step_h(step)
@@ -77,6 +75,7 @@ plt.scatter(steps*dt, neurons, s=0.3)
 #plt.savefig("./fig_cut.png")
 
 #plt.show()
+
 
 """
 plt.plot(dt * np.arange(num_steps), gv.Ca_all[:,2,2])

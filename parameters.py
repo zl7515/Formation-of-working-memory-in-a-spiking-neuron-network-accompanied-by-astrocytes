@@ -74,6 +74,6 @@ alpha = 0.8
 """ simulation parameters"""
 dt = 0.0005
 dtn = 1000*dt
-T = 3
+T = 0.2
 num_steps = int(T/dt)+1
 ##########################

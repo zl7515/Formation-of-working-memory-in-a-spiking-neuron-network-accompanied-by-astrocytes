@@ -23,6 +23,6 @@ def init():
     Ca_all = np.zeros((num_steps, Mastro, Nastro))  # 3d array to store Ca
     h_all = np.zeros((num_steps, Mastro, Nastro))  # 3d array to store h
     IP3_all = np.zeros((num_steps, Mastro, Nastro))  # 3d array to store IP3
-    Ca_all[0] = np.random.uniform(0.1, 0.2, size=(Mastro, Nastro))
+    Ca_all[0] = np.full((Mastro, Nastro), 0.07)
     h_all[0] = np.full((Mastro, Nastro), h_init) 
     IP3_all[0] = np.full((Mastro, Nastro), 0.85)

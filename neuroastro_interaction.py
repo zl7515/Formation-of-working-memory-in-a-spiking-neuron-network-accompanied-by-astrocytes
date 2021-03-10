@@ -31,8 +31,8 @@ shape: (Mneuro, Nneuro, Mastro, Nastro)
 def astroneuro_connection():
     gv.adj_ts_an = np.transpose(gv.adj_ts_na, (2,3,0,1))
 
-""" calculate astrocyte glutamate according to neuron glutamate""" 
-#@numba.jit(nopython=True)        
+""" calculate astrocyte glutamate according to neuron glutamate"""  
+    
 def calcul_astro_G(neuro_G):
     astro_G = np.zeros((Mastro, Nastro))
     for j in range(Mastro):
@@ -41,8 +41,25 @@ def calcul_astro_G(neuro_G):
             astro_G[j, k] = G_mat.sum()
     return astro_G
 
+"""
+def calcul_astro_G(neuro_G):
+    G_list = [(gv.adj_ts_na[j, k] * neuro_G).sum() for j in range(Mastro) for k in range(Nastro)]
+    return np.array(G_list).reshape((Mastro, Nastro))
+"""
+
+"""
+@numba.jit(nopython=True)
+def calcul_astro_G(neuro_G, adj):
+    astro_G = np.zeros((Mastro, Nastro))
+    for j in range(Mastro):
+        for k in range(Nastro):
+            G_mat = adj[j, k] * neuro_G
+            astro_G[j, k] = G_mat.sum()
+    return astro_G
+"""
+
 """ calculate neuron calcium according to astrocyte calcium"""
-#@numba.jit(nopython=True)
+"""
 def calcul_neuro_Ca(astro_Ca):
     neuro_Ca = np.zeros((Mneuro, Nneuro))
     for j in range(Mneuro):
@@ -50,7 +67,16 @@ def calcul_neuro_Ca(astro_Ca):
             Ca_mat = gv.adj_ts_an[j, k] * astro_Ca
             neuro_Ca[j, k] = Ca_mat.sum()
     return neuro_Ca
+"""
 
+@numba.jit(nopython=True)
+def calcul_neuro_Ca(astro_Ca, adj):
+    neuro_Ca = np.zeros((Mneuro, Nneuro))
+    for j in range(Mneuro):
+        for k in range(Nneuro):
+            Ca_mat = adj[j, k] * astro_Ca
+            neuro_Ca[j, k] = Ca_mat.sum()
+    return neuro_Ca
 
 """
 neuroastro_connection()
